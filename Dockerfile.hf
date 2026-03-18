@@ -1,35 +1,33 @@
-FROM python:3.11-slim
+FROM python:3.10
 
-# Install system dependencies
+WORKDIR /app
+
+# Install minimal system deps
 RUN apt-get update && apt-get install -y \
-    curl \
-    redis-server \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ollama
-RUN curl -fsSL https://ollama.com/install.sh | sh
+# Copy requirements first
+COPY requirements.txt .
 
-# Set up user for Hugging Face (UID 1000)
+# Install Python deps
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Create HF user
 RUN useradd -m -u 1000 user
-USER user
-ENV PATH="/home/user/.local/bin:$PATH"
 
-WORKDIR /app
-
-# Copy requirements and install
-COPY --chown=user requirements.txt .
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
-
-# Copy the rest of the application
+# Copy app code
 COPY --chown=user . .
 
-# Ensure the start script is executable
+# Make script executable
 RUN chmod +x start.sh
 
-# HF Spaces requires port 7860
+# Switch to non-root user
+USER user
+
+# HF requires this port
 EXPOSE 7860
 
-# Run the process manager
 CMD ["./start.sh"]

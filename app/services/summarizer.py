@@ -5,7 +5,7 @@ import time
 HF_API_KEY = os.getenv("HF_API_KEY")
 HF_MODEL = os.getenv("HF_MODEL", "google/flan-t5-large")
 
-API_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+API_URL = f"https://router.huggingface.co/v1/models/{HF_MODEL}:hf-inference/summarization"
 
 headers = {
     "Authorization": f"Bearer {HF_API_KEY}",
@@ -16,7 +16,6 @@ def summarize(text: str):
     if not text or len(text.strip()) < 10:
         return "The system could not extract enough meaningful text."
 
-    # 🔥 YOUR PROMPT MOVED HERE
     prompt = (
         "You are a professional content analyst.\n"
         "Summarize the following content in 2-3 sentences.\n\n"
@@ -45,8 +44,8 @@ def summarize(text: str):
 
         data = response.json()
 
-        if isinstance(data, list):
-            return data[0].get("generated_text")
+        if isinstance(data, list) and data:
+            return data[0].get("generated_text", "No summary generated")
 
         if isinstance(data, dict) and "error" in data:
             time.sleep(2)

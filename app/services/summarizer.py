@@ -1,39 +1,55 @@
 import requests
-from app.core.config import HF_API_KEY, HF_MODEL
+import os
+import time
 
-def summarize(text: str) -> str:
-    """Sends content to the Hugging Face Inference API for summarization."""
+HF_API_KEY = os.getenv("HF_API_KEY")
+HF_MODEL = os.getenv("HF_MODEL", "google/flan-t5-large")
+
+API_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+
+headers = {
+    "Authorization": f"Bearer {HF_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+def summarize(text: str):
     if not text or len(text.strip()) < 10:
-        return "Insufficient content to provide a meaningful summary."
+        return "The system could not extract enough meaningful text."
 
-    if not HF_API_KEY:
-        return "Error: Hugging Face API key is not configured. Please set the HF_API_KEY secret."
+    # 🔥 YOUR PROMPT MOVED HERE
+    prompt = (
+        "You are a professional content analyst.\n"
+        "Summarize the following content in 2-3 sentences.\n\n"
+        "Rules:\n"
+        "- Do NOT mention HTML, website, styles, or code.\n"
+        "- Focus on the actual meaning and key takeaways.\n"
+        "- If it's a portfolio, describe the person's role and expertise.\n"
+        "- Start directly with the summary.\n\n"
+        f"Content:\n{text}"
+    )
 
-    api_url = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-    
     payload = {
-        "inputs": text,
-        "parameters": {"max_length": 150, "min_length": 40, "do_sample": False}
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 150,
+            "temperature": 0.3
+        }
     }
 
-    try:
-        response = requests.post(api_url, headers=headers, json=payload, timeout=60)
-        
-        # Handle specifically for "Model is loading" which is common in HF free tier
-        if response.status_code == 503:
-            return "Error: The model is currently loading on Hugging Face. Please try again in a few seconds."
+    for _ in range(3):
+        response = requests.post(API_URL, headers=headers, json=payload)
 
         if response.status_code != 200:
-            return f"Error: Inference failed with status {response.status_code}: {response.text}"
-            
-        result = response.json()
-        
-        # BART/T5 usually return a list with a single dictionary
-        if isinstance(result, list) and len(result) > 0:
-            return result[0].get("summary_text", "Failed to parse summary.")
-            
-        return str(result)
-        
-    except Exception as e:
-        return f"Error: Summarization failed - {str(e)}"
+            time.sleep(2)
+            continue
+
+        data = response.json()
+
+        if isinstance(data, list):
+            return data[0].get("generated_text")
+
+        if isinstance(data, dict) and "error" in data:
+            time.sleep(2)
+            continue
+
+    return "Error: Failed to generate summary"

@@ -41,14 +41,15 @@ def summarize(text: str):
             response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
 
             if response.status_code != 200:
+                print(f"DEBUG: HF API ERROR {response.status_code}: {response.text}")
                 time.sleep(2)
                 continue
 
             data = response.json()
-
             return data["choices"][0]["message"]["content"]
 
-        except Exception:
+        except Exception as e:
+            print(f"DEBUG: Exception during summarization: {str(e)}")
             time.sleep(2)
 
-    return "Error: Failed to generate summary"
+    return "Error: Failed to generate summary after multiple attempts. Check server logs."

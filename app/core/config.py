@@ -11,4 +11,4 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 # Hugging Face Inference API configuration
 HF_API_KEY = os.getenv("HF_API_KEY")
-HF_MODEL = os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.2")
+HF_MODEL = os.getenv("HF_MODEL", "openai/gpt-oss-120b:fastest")

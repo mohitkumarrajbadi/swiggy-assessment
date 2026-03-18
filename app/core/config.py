@@ -10,6 +10,5 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 # Hugging Face Inference API configuration
-HF_TOKEN = os.getenv("HF_TOKEN")
-HF_MODEL_REPO = os.getenv("HF_MODEL_REPO", "facebook/bart-large-cnn")
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
+HF_API_KEY = os.getenv("HF_API_KEY")
+HF_MODEL = os.getenv("HF_MODEL", "facebook/bart-large-cnn")

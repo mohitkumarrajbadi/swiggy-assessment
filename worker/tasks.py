@@ -11,6 +11,9 @@ def process_job(self, job_id):
     db = SessionLocal()
     job = db.query(Job).filter(Job.id == job_id).first()
 
+    if not job:
+        return
+
     try:
         job.status = "processing"
         db.commit()
@@ -22,15 +25,22 @@ def process_job(self, job_id):
         else:
             content = job.input_data
 
+        print("Content length:", len(content))
+
         summary = summarize(content)
-        
+
+        print("Summary:", summary[:200])
+
         end_time = time.time()
         job.processing_time_ms = int((end_time - start_time) * 1000)
 
-        job.summary = summary
-        job.status = "completed"
-
-        set_cache(job.input_data, summary)
+        if summary.startswith("Error"):
+            job.status = "failed"
+            job.error = summary
+        else:
+            job.summary = summary
+            job.status = "completed"
+            set_cache(job.input_data, summary)
 
         db.commit()
 

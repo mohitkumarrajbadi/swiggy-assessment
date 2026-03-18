@@ -1,10 +1,8 @@
+from app.core.config import HF_API_KEY, HF_MODEL
 import requests
-import os
 import time
 
-HF_API_KEY = os.getenv("HF_API_KEY")
-HF_MODEL = os.getenv("HF_MODEL", "openai/gpt-oss-120b:fastest")
-
+# The new Hugging Face Inference AI Router (OpenAI-compatible)
 API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 headers = {

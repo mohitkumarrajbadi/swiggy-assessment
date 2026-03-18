@@ -1,104 +1,136 @@
-# AI Summarizer Service
+# 🚀 AI Summarizer Service
 
-An asynchronous, distributed AI service built to summarize articles, documents, or long text quickly using self-hosted LLMs.
+An **asynchronous, distributed backend service** that summarizes web content and long-form text using modern LLM APIs. Built with a focus on scalability, reliability, and real-world production constraints.
 
-## Overview
+---
 
-Summarizing long text using LLMs can take several seconds. This service uses a decoupled architecture to accept user requests instantly, process them in the background via Celery, and store results for later retrieval. It includes a built-in Redis caching layer to provide sub-millisecond responses for previously summarized content.
+## 🌐 Live Demo
 
-## Architecture
+You can test the API and explore live documentation here:
+👉 **[Swagger UI (Live API)](https://swiggy-assessment-production.up.railway.app/docs)**
 
-- **FastAPI**: High-performance web framework for the API layer.
-- **Celery**: Distributed task queue for asynchronous processing.
-- **Redis**: Acts as both the Celery message broker and the result cache.
-- **PostgreSQL**: Persistent storage for job status, results, and processing metrics.
-- **Ollama**: Local LLM engine (Llama2) used for inference.
+---
 
-[View Full Architecture Documentation (High/Low Level Design)](file:///Users/mohitbadi/.gemini/antigravity/brain/de7ec6f8-8d4e-4acb-93d6-f3549b3bedbd/architecture.md)
+## 🧠 Why This Exists?
 
-## Project Structure
+Summarizing large articles using LLMs can be slow (several seconds per request). To ensure a smooth user experience, this system uses a **decoupled architecture**:
 
-| File / Directory | Description |
-| :--- | :--- |
-| `app/api/routes.py` | API endpoints and request hashing for idempotency. |
-| `app/services/fetcher.py` | Metadata-aware web extraction (supports React/SPA). |
-| `app/services/summarizer.py` | Persona-driven LLM prompt engineering for cleaner summaries. |
-| `worker/tasks.py` | Background worker logic and performance tracking. |
-| `app/core/database.py` | Resilient database connection pool with automatic retries. |
-| `tests/` | Comprehensive unit and integration test suite. |
+1.  **Instant Acceptance**: Submit a URL and get a `job_id` back in milliseconds.
+2.  **Async Processing**: High-latency LLM calls happen in the background via Celery.
+3.  **Smart Caching**: Repeated requests for the same content are served instantly from Redis.
 
-## Advanced Features & Edge Cases
+---
 
-- **Metadata-Aware Fetching (SPA Support)**: Modern sites (like Portfolios) often have empty bodies on first load. Our fetcher falls back to SEO Meta tags to ensure content is always captured.
-- **System Analyst Persona**: The LLM is strictly instructed to ignore HTML code and focus on the human substance of the text.
-- **Idempotency & Caching**: SHA-256 content hashing ensures that the same article is never summarized twice, saving computing power.
-- **Startup Resilience**: The API automatically retries database connections, preventing crashes during multi-container Docker boots.
+## 🏗️ System Architecture
 
-## Setup & Installation
-
-### Prerequisites
-- Docker & Docker Compose
-- [Ollama](https://ollama.com/) installed and running locally
-
-### Getting Started
-
-1. **Clone the repository**:
-   ```bash
-   git clone <your-repo-url>
-   cd summarizer
-   ```
-
-2. **Configure Environment Variables**:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Start the Services**:
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Prepare the LLM**:
-   Ensure you have the required model pulled in Ollama:
-   ```bash
-   ollama pull llama2
-   ```
-
-## API Endpoints
-
-### 1. Submit Content
-**POST** `/submit`
-- Body: `{"url": "https://example.com"}` OR `{"text": "Your long text..."}`
-- Returns: `{"job_id": "uuid", "status": "queued"}`
-
-### 2. Check Status
-**GET** `/status/{job_id}`
-- Returns: `{"job_id": "uuid", "status": "completed", "created_at": "timestamp"}`
-
-### 3. Retrieve Result
-**GET** `/result/{job_id}`
-- Returns:
-  ```json
-  {
-    "job_id": "uuid",
-    "original_url": "https://example.com",
-    "summary": "The generated summary...",
-    "cached": false,
-    "processing_time_ms": 8500
-  }
-  ```
-
-## Testing
-
-The project includes a comprehensive test suite (unit + integration).
-
-**Run tests locally**:
-```bash
-DATABASE_URL=sqlite:///:memory: PYTHONPATH=. ./venv/bin/pytest tests/
+```mermaid
+graph TD
+    Client[Client] --> API[FastAPI]
+    API --> Redis[Redis Queue]
+    Redis --> Worker[Celery Worker]
+    Worker --> LLM[Hugging Face Router API]
+    Worker --> DB[(PostgreSQL)]
+    DB --> API
+    API --> Cache[Redis Cache]
 ```
 
-## Edge Cases Handled
-- **Idempotency**: Repeated submissions of the same content are served instantly from the Redis cache.
-- **Robust Fetching**: Detailed error handling for invalid URLs and network timeouts.
-- **Graceful Failure**: If the LLM or network fails, the job status is updated to `failed` with the error reason preserved.
-- **Local Dev Stability**: Disabled SSL verification for local fetcher tests to avoid certificate issues in dev environments.
+### Technical Stack
+- **Framework**: FastAPI (High-performance Python)
+- **Task Queue**: Celery + Redis
+- **Persistence**: PostgreSQL (SQLAlchemy)
+- **AI Engine**: Hugging Face AI Router (`Mistral-7B` / `GPT-OSS`)
+- **Deployment**: Railway (Cloud Native)
+
+---
+
+## ✨ Key Features
+
+- **⚡ Non-Blocking API**: Distributed task execution ensures the main thread stays responsive.
+- **🌐 SPA-Aware Scraping**: Handles modern JavaScript-heavy websites (React/Vue portfolios).
+- **🧠 Prompt Engineering**: Specialized prompts filter out HTML noise and focus on semantic insights.
+- **🔁 Idempotency**: Content hashing prevents redundant LLM calls for the same input.
+- **🛡️ Fault Tolerance**: Built-in retry logic and robust error tracking for every job.
+
+---
+
+## 📁 Project Structure
+
+| Path | Description |
+|------|------------|
+| `app/api/routes.py` | REST endpoints and request orchestration |
+| `app/services/fetcher.py` | Web content extraction with SEO fallback |
+| `app/services/summarizer.py` | LLM integration and prompt logic |
+| `worker/tasks.py` | Asynchronous job execution logic |
+| `app/core/database.py` | Database connection and session management |
+
+---
+
+## ⚙️ Local Development
+
+### Prerequisites
+- Python 3.10+
+- Redis Server
+- PostgreSQL Instance
+- Hugging Face API Key
+
+### 1. Installation
+```bash
+git clone <your-repo-url>
+cd swiggy-assessment
+pip install -r requirements.txt
+```
+
+### 2. Configuration
+Create a `.env` file (see `.env.example`):
+```env
+HF_API_KEY=your_huggingface_token
+DATABASE_URL=postgresql://user:password@localhost/db
+REDIS_URL=redis://localhost:6379/0
+```
+
+### 3. Run Services
+```bash
+# Start the API
+uvicorn app.main:app --reload
+
+# Start the Worker (in a separate terminal)
+celery -A worker.celery_app worker --loglevel=info --concurrency=1
+```
+
+---
+
+## 📡 API Usage
+
+### 1. Submit a Job
+**POST** `/submit`
+```json
+{
+  "url": "https://example.com/article"
+}
+```
+
+### 2. Check Result
+**GET** `/result/{job_id}`
+```json
+{
+  "job_id": "uuid",
+  "status": "completed",
+  "summary": "This article discusses...",
+  "processing_time_ms": 1200
+}
+```
+
+---
+
+## 🔥 Production Evolution (Interviewer Highlights)
+
+During the development of this assessment, the following high-level SDE decisions were made:
+- **Ollama → HF API**: Moved from local containerized LLMs to a serverless API Router to optimize for memory constraints (512MB RAM).
+- **Decoupled Workers**: Implemented a dedicated Celery worker to separate CPU-intensive scraping and API calls from the IO-bound FastAPI web server.
+- **Unified Caching**: Integrated a Redis-based caching layer that yields sub-50ms response times for repeat queries.
+
+---
+
+## 👨‍💻 Author
+**Mohit Kumar Raj Badi**
+AI & Backend Engineer

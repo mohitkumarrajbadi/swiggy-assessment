@@ -3,52 +3,54 @@ import os
 import time
 
 HF_API_KEY = os.getenv("HF_API_KEY")
-HF_MODEL = os.getenv("HF_MODEL", "google/flan-t5-large")
+HF_MODEL = os.getenv("HF_MODEL", "openai/gpt-oss-120b:fastest")
 
-API_URL = f"https://router.huggingface.co/v1/models/{HF_MODEL}:hf-inference/summarization"
+API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 headers = {
     "Authorization": f"Bearer {HF_API_KEY}",
     "Content-Type": "application/json"
 }
 
+
 def summarize(text: str):
     if not text or len(text.strip()) < 10:
-        return "The system could not extract enough meaningful text."
-
-    prompt = (
-        "You are a professional content analyst.\n"
-        "Summarize the following content in 2-3 sentences.\n\n"
-        "Rules:\n"
-        "- Do NOT mention HTML, website, styles, or code.\n"
-        "- Focus on the actual meaning and key takeaways.\n"
-        "- If it's a portfolio, describe the person's role and expertise.\n"
-        "- Start directly with the summary.\n\n"
-        f"Content:\n{text}"
-    )
+        return "Not enough meaningful content to summarize."
 
     payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 150,
-            "temperature": 0.3
-        }
+        "model": HF_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a professional content analyst. "
+                    "Summarize content in 2-3 sentences. "
+                    "Do not mention HTML, website, or code. "
+                    "Focus on the actual meaning and key insights."
+                )
+            },
+            {
+                "role": "user",
+                "content": text[:4000]  # prevent overflow
+            }
+        ],
+        "temperature": 0.3,
+        "max_tokens": 150
     }
 
     for _ in range(3):
-        response = requests.post(API_URL, headers=headers, json=payload)
+        try:
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
 
-        if response.status_code != 200:
+            if response.status_code != 200:
+                time.sleep(2)
+                continue
+
+            data = response.json()
+
+            return data["choices"][0]["message"]["content"]
+
+        except Exception:
             time.sleep(2)
-            continue
-
-        data = response.json()
-
-        if isinstance(data, list) and data:
-            return data[0].get("generated_text", "No summary generated")
-
-        if isinstance(data, dict) and "error" in data:
-            time.sleep(2)
-            continue
 
     return "Error: Failed to generate summary"
